@@ -1,0 +1,7 @@
+pcaps/
+*.pcap
+*.pcapng
+*.zip
+eve.json
+*.log
+.env
