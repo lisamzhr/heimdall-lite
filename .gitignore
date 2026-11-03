@@ -5,3 +5,4 @@ pcaps/
 eve.json
 *.log
 .env
+out/
