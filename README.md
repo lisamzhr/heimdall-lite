@@ -26,7 +26,7 @@ Ubuntu Server 24.04 (VirtualBox), Suricata, Zeek, tshark, Python (pandas, scikit
 
 ## Progress
 - [x] Sensor VM (Ubuntu Server 24.04)
-- [ ] Install Suricata, replay first pcap
+- [x] Install Suricata, replay first pcap
 - [ ] Zeek features + custom rules
 - [ ] ML detector + evaluation
 - [ ] 24/7 service + Discord alerts
