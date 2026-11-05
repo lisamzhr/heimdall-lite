@@ -58,5 +58,5 @@ Runs Suricata offline on the pcap and prints the alert count and the top rules. 
 ## Scope and limits
 - Lab / own-network use only. Detection is alert-only (no blocking).
 - "Live" behaviour is simulated by replaying pcaps; there is no 24/7 sensor.
-- CTU-13 is old (2011-era botnets), weak on modern encrypted traffic, and its full-traffic pcaps are truncated (no payload), which disadvantages payload-based rules. Results are reported with this in mind.
+- CTU-13 is old (2011-era botnets) and weak on modern encrypted traffic. Its full-traffic pcaps are not public (privacy); the botnet-only pcaps are, plus labelled flows. Results are reported with this in mind.
 - ML on labelled lab/CTU-13 data will produce false positives on real networks.
