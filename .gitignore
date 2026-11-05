@@ -6,3 +6,4 @@ eve.json
 *.log
 .env
 out/
+data/
