@@ -7,10 +7,17 @@ set -eu
 
 PCAP="${1:?usage: $0 <file.pcap> [outdir]}"
 OUT="${2:-out/$(basename "${PCAP%.*}")}"
+case "$OUT" in
+  *..*|/*) echo "outdir must be a relative path under out/"; exit 1 ;;
+  out/*) ;;
+  *) echo "outdir must be under out/"; exit 1 ;;
+esac
+
 ARGS=()
 [ -f rules/heimdall.rules ] && ARGS+=(-s rules/heimdall.rules)
 [ -n "${HOME_NET:-}" ] && ARGS+=(--set "vars.address-groups.HOME_NET=${HOME_NET}")
 
+sudo rm -rf -- "$OUT"   # Suricata appends to existing logs, so always start clean
 mkdir -p "$OUT"
 sudo suricata -c /etc/suricata/suricata.yaml -r "$PCAP" -l "$OUT" -k none "${ARGS[@]}"
 
