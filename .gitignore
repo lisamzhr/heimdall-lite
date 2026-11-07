@@ -7,3 +7,5 @@ eve.json
 .env
 out/
 data/
+__pycache__/
+__pycache__/
