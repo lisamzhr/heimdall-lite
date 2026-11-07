@@ -60,3 +60,8 @@ Runs Suricata offline on the pcap and prints the alert count and the top rules. 
 - "Live" behaviour is simulated by replaying pcaps; there is no 24/7 sensor.
 - CTU-13 is old (2011-era botnets) and weak on modern encrypted traffic. Its full-traffic pcaps are not public (privacy); the botnet-only pcaps are, plus labelled flows. Results are reported with this in mind.
 - ML on labelled lab/CTU-13 data will produce false positives on real networks.
+
+## Alerting (replay mode)
+`scripts/run_pipeline.sh <pcap>` replays a capture through Suricata and posts one summary to Discord when it finds severity 1-2 rule hits or a host contacting 26+ destinations in a minute. Evidence pcaps are saved locally and attached when small.
+
+![Discord alert](reports/img/discord-alert.png)
