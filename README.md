@@ -67,3 +67,41 @@ Runs Suricata offline on the pcap and prints the alert count and the top rules. 
 ![Discord alert](reports/img/discord-alert.png)
 
 **Live demo tip:** wait at least 1-2 minutes after Suricata prints "Engine started" before generating traffic — rule loading takes time, and anything sent before that is missed.
+
+## Demo flow (live mode)
+Three terminals, run in this order:
+
+1. **Suricata (live capture)** — VM, terminal 1:
+   ```bash
+   cd ~/heimdall-lite
+   mkdir -p out/live
+   sudo rm -f out/live/eve.json out/live/fast.log
+   sudo suricata -c /etc/suricata/suricata.yaml -s rules/heimdall.rules -i enp0s8 -l out/live -k none
+   ```
+   Wait for `Engine started`, then wait **1-2 more minutes** before generating traffic — rule loading takes time, and anything sent too early is missed.
+
+2. **Discord watcher** — VM, terminal 2 (new SSH session):
+   ```bash
+   cd ~/heimdall-lite
+   sudo chmod 644 out/live/eve.json
+   source ~/venv-heimdall/bin/activate
+   python scripts/live_watch.py out/live/eve.json
+   ```
+   Prints `Watching out/live/eve.json ...` and then one line per alert it forwards.
+
+3. **Generate traffic** — Windows PowerShell:
+   ```powershell
+   nmap -sS -T4 -p 1-1024 192.168.56.111
+   ```
+   Within a few seconds, terminal 2 prints `RULE ALERT ...` and a message appears in Discord.
+
+Stop with Ctrl+C in terminal 2, then terminal 1.
+
+**Note:** live mode detects and alerts from Suricata's `eve.json` stream; it does not attach evidence pcaps (no file exists yet to cut a slice from). Evidence pcaps are a replay-mode feature only (`scripts/run_pipeline.sh`, see below).
+
+## Replay mode (with evidence pcap)
+For a capture already on disk:
+```bash
+scripts/run_pipeline.sh pcaps/<file>.pcap
+```
+Replays it through Suricata, posts one Discord summary if anything looks suspicious, and saves a small evidence pcap (only the flagged hosts' traffic) under `evidence/` — attached to the message when under 5 MB.
