@@ -1,98 +1,124 @@
 # Heimdall Lite
 
-A free, laptop-only network detection lab that **compares rule-based (Suricata) and ML-based detection** on malware traffic, and reports honestly where each one wins and fails.
+A free, laptop-based network detection lab that compares rule-based detection using Suricata with ML-based detection on malware traffic. It evaluates the strengths and limitations of both approaches using reproducible experiments.
 
-> Status: core pipeline complete — rules, ML, Discord alerting (both replay and live demo modes), 3 incident reports.
+> **Status:** Core pipeline complete. Includes custom detection rules, ML detection, Discord alerting for replay and live demo modes, and three incident reports.
 
 ## Goal
-Reproducible, offline, $0 pcap analysis pipeline: replay (or live-capture) traffic, detect with Suricata rules and an ML model, compare the results, and alert on Discord.
+
+Build a reproducible, offline, zero-cost PCAP analysis pipeline that can replay or capture network traffic, detect suspicious activity using Suricata and an ML model, compare detection results, and send alerts to Discord.
 
 ## Pipeline
+
 ```mermaid
 flowchart LR
-  A[pcap / live capture] --> B[Suricata rules]
-  A --> C[Flow features]
-  C --> D[ML model]
-  B --> E{suspicious?}
-  D --> E
-  E -->|yes| F[Discord alert + saved pcap/log]
+    A[pcap / live capture] --> B[Suricata rules]
+    A --> C[Flow features]
+    C --> D[ML model]
+    B --> E{suspicious?}
+    D --> E
+    E -->|yes| F[Discord alert + saved pcap/log]
 ```
 
-## Detection targets and how each is covered
+## Detection Targets and Coverage
+
 | Target | Data | Detection |
 |---|---|---|
-| Botnet C2 beaconing | CTU-13 + malware-traffic-analysis.net pcaps | Suricata rules vs Random Forest on flow features |
-| Port scanning | Own lab traffic (Windows host -> sensor VM) | Custom Suricata rule |
-| SSH brute force | Own lab traffic (Windows host -> sensor VM) | Custom Suricata rule |
-| Host/network sweeps (ICMP, SMB) | malware-traffic-analysis.net pcap | Behavioural (fan-out) feature; rules largely miss this |
-| DGA domains | Domain lists | Stretch goal, not done |
+| Botnet C2 beaconing | CTU-13 and malware-traffic-analysis.net pcaps | Suricata rules vs Random Forest on flow features |
+| Port scanning | Own lab traffic (Windows host → sensor VM) | Custom Suricata rule |
+| SSH brute force | Own lab traffic (Windows host → sensor VM) | Custom Suricata rule |
+| Host/network sweeps (ICMP, SMB) | malware-traffic-analysis.net pcap | Behavioural fan-out feature. Suricata rules largely miss this activity |
+| DGA domains | Domain lists | Stretch goal. Not implemented |
 
 ## Stack
-Ubuntu Server 24.04 (VirtualBox), Suricata 8, Wireshark (manual cross-check), Python (pandas, scikit-learn), Discord webhook, jq.
 
-## Repo structure
+Ubuntu Server 24.04 (VirtualBox), Suricata 8, Wireshark for manual cross-checking, Python (pandas, scikit-learn), Discord webhook, and jq.
+
+## Repository Structure
+
 | Folder | Purpose |
 |---|---|
-| `rules/` | Custom Suricata rules (`heimdall.rules`) and rule-group config (`enable.conf`) |
-| `scripts/` | `replay_pcap.sh` (offline Suricata run), `alert_discord.py` + `run_pipeline.sh` (replay-mode alerting), `live_watch.py` (live-mode alerting), `rules_recall.sh` |
-| `ml/` | Feature prep, training/evaluation, sanity checks |
-| `reports/` | Incident reports, evaluation, demo script, images |
-| `pcaps/`, `data/`, `out/`, `evidence/` | Local-only working data (gitignored) |
+| `rules/` | Custom Suricata rules (`heimdall.rules`) and rule group configuration (`enable.conf`) |
+| `scripts/` | `replay_pcap.sh` for offline Suricata analysis, `alert_discord.py` and `run_pipeline.sh` for replay-mode alerting, `live_watch.py` for live-mode alerting, and `rules_recall.sh` |
+| `ml/` | Feature preparation, model training and evaluation, and sanity checks |
+| `reports/` | Incident reports, evaluation results, demo script, and images |
+| `pcaps/`, `data/`, `out/`, `evidence/` | Local working data. Excluded from Git |
 
-## Reproduce an analysis
+## Reproducing an Analysis
+
 ```bash
 scripts/replay_pcap.sh pcaps/<file>.pcap
 ```
-Runs Suricata offline on the pcap and prints the alert count and the top rules. Output goes to `out/` (gitignored).
 
-## Alerting (replay mode)
-`scripts/run_pipeline.sh <pcap>` replays a capture through Suricata and posts one summary to Discord when it finds severity 1-2 rule hits or a host contacting 26+ destinations in a minute. Evidence pcaps are saved locally and attached when small.
+Runs Suricata against the specified PCAP in offline mode. The script prints the total alert count and the most frequently triggered rules. All output is stored in `out/`, which is excluded from Git.
+
+## Alerting (Replay Mode)
+
+```bash
+scripts/run_pipeline.sh <pcap>
+```
+
+Replays the specified capture through Suricata and sends a summary to Discord when it detects severity 1–2 rule hits or a host contacting 26 or more destinations within one minute.
+
+Evidence PCAPs are saved locally and attached to Discord alerts when the file size permits.
 
 ![Discord alert](reports/img/discord-alert.png)
 
-## Demo flow (live mode)
-Three terminals, run in this order:
+## Demo Flow (Live Mode)
 
-1. **Suricata (live capture)** — VM, terminal 1:
-   ```bash
-   cd ~/heimdall-lite
-   mkdir -p out/live
-   sudo rm -f out/live/eve.json out/live/fast.log
-   sudo suricata -c /etc/suricata/suricata.yaml -s rules/heimdall.rules -i enp0s8 -l out/live -k none
-   ```
-   Wait for `Engine started`, then wait **1-2 more minutes** before generating traffic — rule loading takes time, and anything sent too early is missed.
+The live demo uses three terminals. Run them in the following order.
 
-2. **Discord watcher** — VM, terminal 2 (new SSH session):
-   ```bash
-   cd ~/heimdall-lite
-   sudo chmod 644 out/live/eve.json
-   source ~/venv-heimdall/bin/activate
-   python scripts/live_watch.py out/live/eve.json
-   ```
-   Prints `Watching out/live/eve.json ...` and then one line per alert it forwards.
+### 1. Suricata Live Capture
 
-3. **Generate traffic** — Windows PowerShell:
-   ```powershell
-   nmap -sS -T4 -p 1-1024 192.168.56.111
-   ```
-   Within a few seconds, terminal 2 prints `RULE ALERT ...` and a message appears in Discord.
+**Environment:** Sensor VM, Terminal 1
 
-Stop with Ctrl+C in terminal 2, then terminal 1.
+```bash
+cd ~/heimdall-lite
+mkdir -p out/live
+sudo rm -f out/live/eve.json out/live/fast.log
+sudo suricata -c /etc/suricata/suricata.yaml -s rules/heimdall.rules -i enp0s8 -l out/live -k none
+```
 
-**Note:** live mode detects and alerts from Suricata's `eve.json` stream; it does not attach evidence pcaps (no file exists yet to cut a slice from). Evidence pcaps are a replay-mode feature only (`scripts/run_pipeline.sh`, above).
+Wait until `Engine started` appears. Then allow another **1–2 minutes** before generating traffic. This gives Suricata time to load the rules and prevents early traffic from being missed.
 
-## Progress
-- [x] Sensor VM (Ubuntu Server 24.04) and Suricata with ET Open rules
-- [x] Replay script
-- [x] Incident report 01: Cobalt Strike beaconing + SMB/ICMP sweeps, cross-checked in Wireshark
-- [x] Incident reports 02-03 (port scan, SSH brute force)
-- [x] Custom Suricata rules (SYN scan, SSH brute force)
-- [x] ML detector + rules-vs-ML evaluation
-- [x] Discord alerts (replay mode and live mode)
-- [ ] Demo video
+### 2. Discord Watcher
 
-## Scope and limits
-- Lab / own-network use only. Detection is alert-only (no blocking), no 24/7 daemon.
-- CTU-13 is old (2011-era botnets) and weak on modern encrypted traffic. Its full-traffic pcaps are not public (privacy); the botnet-only pcaps are, plus labelled flows. Results are reported with this in mind.
-- ML/behavioural thresholds are tuned on lab/CTU-13 data and will produce false positives on real networks.
-- Live mode has no attached pcap evidence; replay mode does.
+**Environment:** Sensor VM, Terminal 2 (new SSH session)
+
+```bash
+cd ~/heimdall-lite
+sudo chmod 644 out/live/eve.json
+source ~/venv-heimdall/bin/activate
+python scripts/live_watch.py out/live/eve.json
+```
+
+The watcher should print:
+
+```text
+Watching out/live/eve.json ...
+```
+
+It then prints one line for each alert forwarded to Discord.
+
+### 3. Generate Traffic
+
+**Environment:** Windows PowerShell
+
+```powershell
+nmap -sS -T4 -p 1-1024 192.168.56.111
+```
+
+Within a few seconds, Terminal 2 should display a `RULE ALERT ...` message, followed by a Discord notification.
+
+### Stopping the Demo
+
+Press `Ctrl+C` in Terminal 2 first, followed by Terminal 1.
+
+**Note:** Live mode detects and forwards alerts directly from Suricata's `eve.json` stream. It does not attach evidence PCAPs because there is no completed capture file to extract traffic from. Evidence PCAP generation is only available in replay mode through `scripts/run_pipeline.sh`.
+
+## Scope and Limitations
+
+- Designed for lab environments and networks under the user's control. Detection is alert-only, with no traffic blocking or continuous 24/7 monitoring.
+- CTU-13 contains botnet traffic from 2011 and has limited coverage of modern encrypted traffic. Full-traffic PCAPs are not publicly available due to privacy restrictions. Publicly available botnet-only PCAPs and labelled flow data are used instead. Evaluation results are presented with these limitations in mind.
+- ML and behavioural detection thresholds are tuned using lab and CTU-13 data. They may generate false positives when applied to real-world networks.
+- Live mode does not provide attached PCAP evidence. Evidence capture and attachment are supported in replay mode only.
