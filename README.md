@@ -65,3 +65,5 @@ Runs Suricata offline on the pcap and prints the alert count and the top rules. 
 `scripts/run_pipeline.sh <pcap>` replays a capture through Suricata and posts one summary to Discord when it finds severity 1-2 rule hits or a host contacting 26+ destinations in a minute. Evidence pcaps are saved locally and attached when small.
 
 ![Discord alert](reports/img/discord-alert.png)
+
+**Live demo tip:** wait at least 1-2 minutes after Suricata prints "Engine started" before generating traffic — rule loading takes time, and anything sent before that is missed.
