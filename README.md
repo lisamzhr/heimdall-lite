@@ -49,10 +49,10 @@ Runs Suricata offline on the pcap and prints the alert count and the top rules. 
 - [x] Sensor VM (Ubuntu Server 24.04) and Suricata with ET Open rules
 - [x] Replay script
 - [x] Incident report 01: Cobalt Strike beaconing, cross-checked in Wireshark
-- [ ] Incident reports 02-03 (port scan, SSH brute force)
-- [ ] Custom Suricata rules
-- [ ] ML detector + rules-vs-ML evaluation
-- [ ] Discord alerts (replay mode) + dashboard
+- [x] Incident reports 02-03 (port scan, SSH brute force)
+- [x] Custom Suricata rules
+- [x] ML detector + rules-vs-ML evaluation
+- [x] Discord alerts (replay mode) + dashboard
 - [ ] Demo video
 
 ## Scope and limits
